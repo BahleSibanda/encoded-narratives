@@ -1,0 +1,447 @@
+/* ==========================================================================
+   ENCODED NARRATIVES — core stylesheet
+   Design tokens live at the top. Everything else is derived from them.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,560;0,9..144,680;1,9..144,460&family=Newsreader:ital,wght@0,400;0,500;1,400&family=Space+Mono:wght@400;700&display=swap');
+
+:root{
+  /* ---- neutrals: parchment / hide / ink, not the generic AI cream+clay ---- */
+  --ink:            #1b1712;
+  --ink-soft:       #33291f;
+  --parchment:      #efe6d8;
+  --parchment-deep: #e2d5bd;
+  --parchment-line: rgba(27, 23, 18, 0.14);
+  --brass:          #b8863b;
+
+  /* ---- accent colours, drawn from real Nguni beadwork symbolism ---- */
+  --accent-red:   #a22c29;   /* passion / love */
+  --accent-blue:  #26456f;   /* faithfulness / hope */
+  --accent-gold:  #c68a2e;   /* status, brass ornament */
+  --accent-green: #3c6b4b;   /* fertility / growth */
+
+  /* active accent — swapped per door / per story via inline style or JS */
+  --accent: var(--accent-red);
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--parchment));
+
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-body:    'Newsreader', ui-serif, Georgia, serif;
+  --font-mono:    'Space Mono', ui-monospace, monospace;
+
+  --ease: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+
+html{ scroll-behavior: smooth; }
+
+body{
+  margin: 0;
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a{ color: inherit; text-decoration: none; }
+
+.eyebrow{
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+button{
+  font-family: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* reduced motion: kill everything non-essential */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   HOMEPAGE — the hut
+   ========================================================================== */
+
+.hut-page{
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  position: relative;
+  overflow: hidden;
+}
+
+.site-header{
+  text-align: center;
+}
+
+.site-header .mark{
+  font-family: var(--font-display);
+  font-weight: 680;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  letter-spacing: 0.02em;
+}
+
+.site-header .eyebrow{
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+}
+
+/* ---- the hut + door composition ---- */
+.hut-stage{
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 5vw, 4rem);
+  position: relative;
+}
+
+.nav-arrow{
+  width: 3rem;
+  height: 3rem;
+  flex: none;
+  border: 1px solid var(--parchment-line);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.3s var(--ease), transform 0.2s var(--ease), background 0.3s var(--ease);
+  z-index: 5;
+}
+.nav-arrow:hover{
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-2px);
+}
+.nav-arrow svg{ width: 1.1rem; height: 1.1rem; stroke: var(--ink); transition: stroke 0.3s var(--ease); }
+.nav-arrow:hover svg{ stroke: var(--accent); }
+
+.hut{
+  position: relative;
+  width: min(60vw, 460px);
+  aspect-ratio: 4 / 3.4;
+  transition: filter 0.4s var(--ease);
+}
+
+.hut-roof{
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 108%;
+  height: 46%;
+  background: var(--ink);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+/* beadwork frieze band along the roofline — repeating triangle motif */
+.hut-roof::after{
+  content: "";
+  position: absolute;
+  left: 50%; bottom: -0.6rem;
+  transform: translateX(-50%);
+  width: 62%;
+  height: 0.6rem;
+  background-image: linear-gradient(135deg, var(--accent) 25%, transparent 25%),
+                     linear-gradient(225deg, var(--accent) 25%, transparent 25%);
+  background-size: 1rem 0.6rem;
+  background-position: 0 0, 0 0;
+  opacity: 0.9;
+  transition: background-image 0.4s var(--ease);
+}
+
+.hut-body{
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 84%;
+  height: 58%;
+  background: var(--ink-soft);
+  border-radius: 4px 4px 10px 10px;
+}
+
+.door-wrap{
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 34%;
+  height: 66%;
+  z-index: 3;
+}
+
+.door{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--parchment);
+  border-radius: 3px 3px 6px 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1rem;
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 6px rgba(0,0,0,0.02) inset;
+  transition: border-color 0.5s var(--ease), transform 0.5s var(--ease), box-shadow 0.4s var(--ease);
+}
+
+.door:hover{ box-shadow: 0 0 0 6px var(--accent-soft) inset; }
+
+.door .enter-label{
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  transition: color 0.5s var(--ease);
+}
+
+/* vertical beadwork trim running down each side of the door */
+.door::before, .door::after{
+  content: "";
+  position: absolute;
+  top: 0.5rem; bottom: 0.5rem;
+  width: 0.4rem;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--accent) 0, var(--accent) 0.4rem,
+    transparent 0.4rem, transparent 0.8rem
+  );
+  transition: background-image 0.5s var(--ease);
+}
+.door::before{ left: 0.5rem; }
+.door::after{ right: 0.5rem; }
+
+.story-caption{
+  text-align: center;
+  min-height: 4.5rem;
+}
+.story-caption .figure-name{
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  color: var(--accent);
+  transition: color 0.5s var(--ease);
+}
+.story-caption .figure-blurb{
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  max-width: 32ch;
+  margin-inline: auto;
+}
+
+.site-footer{ text-align: center; }
+.learn-more-link{
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  border-bottom: 1px solid var(--parchment-line);
+  padding-bottom: 0.15rem;
+  transition: border-color 0.3s var(--ease), color 0.3s var(--ease);
+}
+.learn-more-link:hover{ border-color: var(--ink); }
+
+/* ---- the "walk through the door" transition overlay ---- */
+.door-overlay{
+  position: fixed;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+  transition: opacity 0.55s var(--ease);
+}
+.hut-page.is-entering .door-overlay{ opacity: 1; pointer-events: all; }
+.hut-page.is-entering .hut-stage{
+  transform: scale(2.4);
+  opacity: 0;
+}
+.hut-page.is-entering .hut-stage{
+  transition: transform 0.6s var(--ease), opacity 0.5s var(--ease) 0.1s;
+}
+.hut-page.is-entering .site-header,
+.hut-page.is-entering .site-footer{
+  transition: opacity 0.35s var(--ease);
+  opacity: 0;
+}
+
+/* ==========================================================================
+   STORY PAGE
+   ========================================================================== */
+
+.story-page{ background: var(--parchment); }
+
+.story-topbar{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem clamp(1.25rem, 4vw, 3rem);
+  background: color-mix(in srgb, var(--parchment) 88%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--parchment-line);
+}
+.story-topbar .story-title{
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+.story-topbar .return-link{
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+
+.story-layout{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: calc(100dvh - 60px);
+}
+
+@media (max-width: 860px){
+  .story-layout{ grid-template-columns: 1fr; }
+}
+
+/* left column: sticky scroll-driven illustration */
+.story-visual{
+  order: 1;
+  position: sticky;
+  top: 60px;
+  height: calc(100dvh - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  overflow: hidden;
+}
+@media (max-width: 860px){
+  .story-visual{ position: relative; top: 0; height: 60vh; order: -1; }
+}
+
+.motif-frame{
+  position: relative;
+  width: min(60%, 320px);
+  aspect-ratio: 1;
+}
+.motif-frame svg{
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  color: var(--accent);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+.motif-frame svg.is-visible{
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* right column: the text, chapter by chapter */
+.story-text{
+  order: 2;
+  padding: clamp(1.5rem, 6vw, 5rem);
+  padding-top: clamp(2rem, 8vw, 6rem);
+}
+
+.story-chapter{
+  max-width: 56ch;
+  margin: 0 0 clamp(5rem, 20vh, 11rem);
+  opacity: 0.25;
+  transform: translateY(14px);
+  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+}
+.story-chapter:last-child{ margin-bottom: clamp(2rem, 8vh, 4rem); }
+.story-chapter.is-visible{ opacity: 1; transform: translateY(0); }
+
+.story-chapter .chapter-index{
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.75rem;
+}
+.story-chapter p{
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+  line-height: 1.75;
+  margin: 0;
+}
+
+.story-nextprev{
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 2rem clamp(1.5rem, 6vw, 5rem) 4rem;
+  border-top: 1px solid var(--parchment-line);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+.story-nextprev a{ color: var(--accent); }
+
+/* ==========================================================================
+   LEARN MORE PAGE
+   ========================================================================== */
+
+.learn-page{
+  min-height: 100dvh;
+  background: var(--ink);
+  color: var(--parchment);
+  display: flex;
+  flex-direction: column;
+}
+
+.learn-page .story-topbar{
+  background: transparent;
+  border-bottom: 1px solid rgba(239,230,216,0.14);
+}
+.learn-page .story-topbar .return-link{ color: var(--brass); }
+.learn-page .story-topbar .site-mark{
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.learn-content{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(2rem, 8vw, 5rem);
+}
+
+.learn-inner{
+  max-width: 60ch;
+  text-align: center;
+}
+.learn-inner h1{
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-style: italic;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  margin: 0 0 1.5rem;
+  color: var(--brass);
+}
+.learn-inner p{
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.8;
+  margin: 0 0 1.3rem;
+  color: rgba(239,230,216,0.88);
+}
+.learn-inner p:last-of-type{ margin-bottom: 0; }

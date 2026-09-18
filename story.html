@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encoded Narratives — Story</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="story-page" id="storyPage">
+
+  <div class="story-topbar">
+    <div class="story-title" id="storyTitle">Loading…</div>
+    <a href="index.html" class="return-link">Return</a>
+  </div>
+
+  <div class="story-layout">
+    <div class="story-visual">
+      <div class="motif-frame" id="motifFrame"></div>
+    </div>
+
+    <div class="story-text" id="storyText">
+      <!-- chapters injected by js/story.js -->
+    </div>
+  </div>
+
+  <div class="story-nextprev">
+    <a href="#" id="prevStoryLink">← Previous door</a>
+    <a href="index.html">Return to the hut</a>
+    <a href="#" id="nextStoryLink">Next door →</a>
+  </div>
+
+  <script src="js/story-data.js"></script>
+  <script src="js/story.js"></script>
+</body>
+</html>

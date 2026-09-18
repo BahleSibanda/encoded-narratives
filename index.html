@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encoded Narratives</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="hut-page" id="hutPage" style="--accent: var(--accent-red)">
+
+  <header class="site-header">
+    <div class="mark">Encoded Narratives</div>
+    <div class="eyebrow">Stories told anew</div>
+  </header>
+
+  <div class="hut-stage" id="hutStage">
+    <button class="nav-arrow" id="prevArrow" aria-label="Previous door">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+
+    <div class="hut">
+      <div class="hut-roof"></div>
+      <div class="hut-body"></div>
+      <div class="door-wrap">
+        <div class="door" id="doorButton" role="button" tabindex="0" aria-label="Enter this story">
+          <span class="enter-label">Enter</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="nav-arrow" id="nextArrow" aria-label="Next door">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+
+  <div class="story-caption">
+    <div class="figure-name" id="figureName"></div>
+    <div class="figure-blurb" id="figureBlurb"></div>
+  </div>
+
+  <footer class="site-footer">
+    <a href="learn-more.html" class="learn-more-link">Learn more.</a>
+  </footer>
+
+  <div class="door-overlay" id="doorOverlay"></div>
+
+  <script src="js/story-data.js"></script>
+  <script src="js/doors.js"></script>
+</body>
+</html>
