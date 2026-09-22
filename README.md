@@ -1,9 +1,5 @@
 # Encoded Narratives
 
-A three-page site: a homepage where you pick a "door" to a story, a
-story page with scroll-revealed illustrations, and a learn-more page.
-No build step — plain HTML/CSS/JS, so it runs straight from disk.
-
 ```
 encoded-narratives/
 ├── index.html          homepage — hut + door carousel
