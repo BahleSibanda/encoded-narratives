@@ -20,14 +20,21 @@
   titleEl.textContent = `${story.figure} — ${story.title}`;
   document.title = `${story.figure} · Encoded Narratives`;
 
-  const prevStory = STORIES[(idx - 1 + STORIES.length) % STORIES.length];
-  const nextStory = STORIES[(idx + 1) % STORIES.length];
-  prevLink.href = `story.html?story=${prevStory.slug}`;
-  prevLink.textContent = `← ${prevStory.figure}`;
-  nextLink.href = `story.html?story=${nextStory.slug}`;
-  nextLink.textContent = `${nextStory.figure} →`;
+  if (STORIES.length > 1){
+    const prevStory = STORIES[(idx - 1 + STORIES.length) % STORIES.length];
+    const nextStory = STORIES[(idx + 1) % STORIES.length];
+    prevLink.href = `story.html?story=${prevStory.slug}`;
+    prevLink.textContent = `← ${prevStory.figure}`;
+    nextLink.href = `story.html?story=${nextStory.slug}`;
+    nextLink.textContent = `${nextStory.figure} →`;
+  } else {
 
-  /* ---- build the text chapters ---- */
+    prevLink.style.display = "none";
+    nextLink.style.display = "none";
+    document.querySelector(".story-nextprev").style.justifyContent = "center";
+  }
+
+  /* ---- text chapters---- */
   story.paragraphs.forEach((para, i) => {
     const chapter = document.createElement("section");
     chapter.className = "story-chapter";
@@ -39,7 +46,7 @@
     textEl.appendChild(chapter);
   });
 
-  /* ---- build one motif svg per chapter, stacked for crossfade ---- */
+  /* ----one motif svg per chapter, stacked for crossfade ---- */
   story.illustrations.forEach((motif, i) => {
     const svg = buildMotif(motif);
     svg.dataset.chapter = i;
@@ -69,6 +76,109 @@
 
   /* show the first motif immediately so the panel isn't empty on load */
   if (motifs[0]) motifs[0].classList.add("is-visible");
+
+  /*
+     vertical row of beads that fills
+     in as you scroll down the story, independent of chapter count.
+     */
+  (function beadProgress(){
+    const track = document.getElementById("beadProgress");
+    if (!track) return;
+
+    const BEAD_COUNT = 16;
+    const beads = [];
+    for (let i = 0; i < BEAD_COUNT; i++){
+      const b = document.createElement("div");
+      b.className = "bead";
+      track.appendChild(b);
+      beads.push(b);
+    }
+
+    let ticking = false;
+    function update(){
+      ticking = false;
+      const doc = document.documentElement;
+      const scrollable = doc.scrollHeight - doc.clientHeight;
+      const fraction = scrollable > 0 ? window.scrollY / scrollable : 0;
+      const filled = Math.round(fraction * BEAD_COUNT);
+      beads.forEach((b, i) => b.classList.toggle("is-filled", i < filled));
+    }
+
+    window.addEventListener("scroll", () => {
+      if (!ticking){
+        window.requestAnimationFrame(update);
+        ticking = true;
+      }
+    }, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+  })();
+
+  /*
+     Ambient sound toggle, a soft synthesised drone, generated with
+     the Web Audio API rather than an external audio file. Off by
+     default; only starts on a real click, since browsers require a
+     user gesture to start audio anyway.
+      */
+  (function ambientSound(){
+    const toggle = document.getElementById("soundToggle");
+    if (!toggle) return;
+
+    let ctx = null, nodes = null, isOn = false;
+
+    function build(){
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+      const master = ctx.createGain();
+      master.gain.value = 0; // fades in after start
+      master.connect(ctx.destination);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 900;
+      filter.connect(master);
+
+      // two gently detuned tones, a fifth apart, for a soft pad drone
+      const freqs = [110, 165];
+      const oscillators = freqs.map((f) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        osc.connect(filter);
+        osc.start();
+        return osc;
+      });
+
+      // slow LFO breathing the volume, so it doesn't sit static
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.08;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 0.015;
+      lfo.connect(lfoGain);
+      lfoGain.connect(master.gain);
+      lfo.start();
+
+      return { master, filter, oscillators, lfo };
+    }
+
+    toggle.addEventListener("click", () => {
+      isOn = !isOn;
+      toggle.setAttribute("aria-pressed", String(isOn));
+
+      if (isOn){
+        if (!ctx) nodes = build();
+        if (ctx.state === "suspended") ctx.resume();
+        nodes.master.gain.cancelScheduledValues(ctx.currentTime);
+        nodes.master.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 1.2);
+      } else if (ctx){
+        nodes.master.gain.cancelScheduledValues(ctx.currentTime);
+        nodes.master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8);
+      }
+    });
+
+    // stop cleanly if the visitor navigates away mid-fade
+    window.addEventListener("pagehide", () => { if (ctx) ctx.close(); });
+  })();
 
   /* ------------------------------------------------------------------ */
   function buildMotif(name){
@@ -139,6 +249,13 @@
       [ [100,55], [60,75], [140,75], [65,120], [135,120] ].forEach(([cx, cy]) => {
         add("circle", { cx, cy, r: 7, fill: "currentColor", stroke: "none" });
       });
+    } else if (/shield/.test(name)){
+      add("polygon", { points: "100,20 165,55 165,120 100,180 35,120 35,55", "stroke-width": "3" });
+      add("line", { x1: 100, y1: 20, x2: 100, y2: 180, "stroke-width": "1.4" });
+    } else if (/council/.test(name)){
+      for (let r = 20; r <= 90; r += 18){
+        add("path", { d: `M ${100 - r} 100 A ${r} ${r} 0 0 1 ${100 + r} 100`, "stroke-width": "2.5" });
+      }
     } else {
       /* default: a simple twin-triangle mark, echoes the female / male
          symbolism referenced in Southern Nguni beadwork */
