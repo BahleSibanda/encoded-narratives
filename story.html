@@ -10,8 +10,16 @@
 
   <div class="story-topbar">
     <div class="story-title" id="storyTitle">Loading…</div>
-    <a href="index.html" class="return-link">Return</a>
+    <div class="topbar-controls">
+      <button class="sound-toggle" id="soundToggle" aria-label="Toggle ambient sound" aria-pressed="false">
+        <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8"/><path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>
+        <svg class="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>
+      </button>
+      <a href="index.html" class="return-link">Return</a>
+    </div>
   </div>
+
+  <div class="bead-progress" id="beadProgress" aria-hidden="true"></div>
 
   <div class="story-layout">
     <div class="story-visual">
