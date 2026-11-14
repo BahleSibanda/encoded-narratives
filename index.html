@@ -2,49 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Encoded Narratives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,680;1,9..144,460&family=Newsreader:ital,wght@0,400;0,500;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="hut-page" id="hutPage" style="--accent: var(--accent-red)">
-
-  <header class="site-header">
+<body class="hut-page" id="hutPage">
+  <header>
     <div class="mark">Encoded Narratives</div>
-    <div class="eyebrow">Stories told anew</div>
+    <div class="sub">NGUNI BEADWORK &amp; THE WOMEN WHO WORE IT</div>
   </header>
 
   <div class="hut-stage" id="hutStage">
-    <button class="nav-arrow" id="prevArrow" aria-label="Previous door">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-
     <div class="hut">
       <div class="hut-roof"></div>
       <div class="hut-body"></div>
-      <div class="door-wrap">
-        <div class="door" id="doorButton" role="button" tabindex="0" aria-label="Enter this story">
-          <span class="enter-label">Enter</span>
-        </div>
-      </div>
+      <div class="door" id="door" role="button" tabindex="0" aria-label="Enter Queen Lozikeyi Dlodlo’s story"><span>ENTER</span></div>
     </div>
-
-    <button class="nav-arrow" id="nextArrow" aria-label="Next door">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
   </div>
 
-  <div class="story-caption">
-    <div class="figure-name" id="figureName"></div>
-    <div class="figure-blurb" id="figureBlurb"></div>
+  <div class="hut-caption">
+    <div class="name">Queen Lozikeyi Dlodlo</div>
+    <div class="blurb">Senior queen of the Ndebele, and the strategist behind an uprising the British never expected.</div>
   </div>
 
-  <footer class="site-footer">
-    <a href="learn-more.html" class="learn-more-link">Learn more.</a>
-  </footer>
+  <div class="hut-foot"><a href="learn-more.html">LEARN MORE.</a></div>
+  <div class="door-overlay"></div>
 
-  <div class="door-overlay" id="doorOverlay"></div>
-
-  <script src="js/story-data.js"></script>
-  <script src="js/doors.js"></script>
+  <script>
+    (function(){
+      var page=document.getElementById('hutPage'), door=document.getElementById('door'), going=false;
+      function enter(){ if(going) return; going=true; page.classList.add('is-entering'); setTimeout(function(){ location.href='story.html'; },650); }
+      door.addEventListener('click',enter);
+      door.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); enter(); } });
+    })();
+  </script>
 </body>
 </html>

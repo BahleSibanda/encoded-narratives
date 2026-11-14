@@ -2,42 +2,58 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Encoded Narratives — Story</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lozikeyi · Encoded Narratives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,560;0,9..144,680;1,9..144,460&family=Newsreader:ital,wght@0,400;0,500;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="story-page" id="storyPage">
+<body class="story-page intro-open" data-tone="dark" data-mode="read">
 
-  <div class="story-topbar">
-    <div class="story-title" id="storyTitle">Loading…</div>
-    <div class="topbar-controls">
-      <button class="sound-toggle" id="soundToggle" aria-label="Toggle ambient sound" aria-pressed="false">
-        <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8a5 5 0 0 1 0 8"/><path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>
-        <svg class="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><line x1="17" y1="9" x2="22" y2="14"/><line x1="22" y1="9" x2="17" y2="14"/></svg>
-      </button>
-      <a href="index.html" class="return-link">Return</a>
+  <div id="stage"></div>
+  <div id="spacer"></div>
+
+  <header class="topbar">
+    <a href="index.html">Home</a>
+    <button id="soundBtn" aria-pressed="false">Sound: off</button>
+    <div class="seg" role="group" aria-label="Read or listen">
+      <button data-mode="read" aria-pressed="true">Read</button>
+      <button data-mode="listen" aria-pressed="false">Listen</button>
     </div>
+    <button id="ccBtn" aria-pressed="false" hidden>Captions</button>
+    <a href="learn-more.html" class="tb-right">Learn more</a>
+  </header>
+
+  <aside id="marker" aria-hidden="true">
+    <div id="mLabel"></div>
+    <div id="mTrack"><div id="mFill"></div><div id="mBead"></div></div>
+  </aside>
+
+  <footer class="bottombar">
+    <button id="chaptersBtn">Chapters</button>
+    <span id="narrNote" role="status"></span>
+    <span id="sceneCount"></span>
+  </footer>
+
+  <div id="chapters" class="overlay" hidden>
+    <button class="close" id="chaptersClose">Close ✕</button>
+    <div class="ch-list" id="chList"></div>
   </div>
 
-  <div class="bead-progress" id="beadProgress" aria-hidden="true"></div>
-
-  <div class="story-layout">
-    <div class="story-visual">
-      <div class="motif-frame" id="motifFrame"></div>
+  <div id="intro" class="intro">
+    <div>
+      <h1>Lozikeyi</h1>
+      <div class="sub">QUEEN IN THE CITY OF KINGS</div>
+      <div class="choices">
+        <button class="choice" data-start="read"><b>Read</b><span>The story appears on screen, in silence.</span></button>
+        <button class="choice" data-start="listen"><b>Listen</b><span>A voice narrates each scene. Captions are off unless you turn them on.</span></button>
+      </div>
+      <div class="hint">Scroll, drag down, or use the arrow keys. You can switch any time.</div>
     </div>
-
-    <div class="story-text" id="storyText">
-      <!-- chapters injected by js/story.js -->
-    </div>
-  </div>
-
-  <div class="story-nextprev">
-    <a href="#" id="prevStoryLink">← Previous door</a>
-    <a href="index.html">Return to the hut</a>
-    <a href="#" id="nextStoryLink">Next door →</a>
   </div>
 
   <script src="js/story-data.js"></script>
-  <script src="js/story.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/animations.js"></script>
 </body>
 </html>

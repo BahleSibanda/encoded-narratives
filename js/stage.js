@@ -1,0 +1,322 @@
+/**
+ * stage.js — the engine. You shouldn't need to edit this to add animations.
+ *
+ * One fixed stage. A tall invisible spacer makes the page scrollable, and the
+ * scroll position `g` (0 → number of scenes) decides which scene is showing and
+ * how far through it you are (`t`, 0 → 1). Scenes crossfade into each other.
+ *
+ * Add your own animation for any scene in js/animations.js:
+ *     Stage.on("c1s03", (t, el, ctx) => { ... });
+ */
+(() => {
+  const { CONFIG, MOODS, CHAPTERS, SCENES } = window.STORY;
+  const N = SCENES.length;
+  const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const NS = "http://www.w3.org/2000/svg";
+
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smooth = (t) => t * t * (3 - 2 * t);
+  const ramp = (t, a, b) => clamp((t - a) / (b - a));
+  const $ = (s) => document.querySelector(s);
+  const mk = (tag, cls, parent) => { const n = document.createElement(tag); if (cls) n.className = cls; if (parent) parent.append(n); return n; };
+
+  const body = document.body, stage = $("#stage"), spacer = $("#spacer");
+  const custom = {};
+  let perScene = 0, g = 0, active = -1, raf = 0;
+
+  /* ---------- build the scenes ---------- */
+  const artPath = (id, layer) => `art/${id}-${layer}.${CONFIG.artExt}`;
+
+  function makeImg(path, brief, parent, phClass) {
+    const img = new Image();
+    img.alt = ""; img.decoding = "async"; img.hidden = true; img.dataset.src = path;
+    parent.append(img);
+    let ph = null;
+    if (CONFIG.showPlaceholders && brief) { ph = mk("div", "ph " + (phClass || ""), parent); ph.textContent = brief; }
+    img.addEventListener("load", () => { img.hidden = false; if (ph) ph.remove(); });
+    img.addEventListener("error", () => img.remove());
+    return img;
+  }
+
+  const sentences = (t) => t.match(/[^.!?]+[.!?]+[”’"]*\s*|[^.!?]+$/g) || [t];
+
+  const built = SCENES.map((s, i) => {
+    const root = mk("section", "scene", stage);
+    root.dataset.id = s.id; root.dataset.art = s.art;
+    root.dataset.tone = MOODS[s.mood].tone;
+    root.style.setProperty("--mood", MOODS[s.mood].bg);
+    root.setAttribute("aria-hidden", "true");
+    mk("div", "mood-bg", root);
+
+    const e = { s, i, root, imgs: [], pieces: [], sents: [] };
+
+    const bgSource = s.bgRef ? SCENES.find((x) => x.id === s.bgRef) : s;
+    if (s.art === "A" || (s.art === "R" && s.bgRef)) {
+      const wrap = mk("div", "layer bg", root);
+      const brief = s.art === "A" ? s.bg : `Background from ${s.bgRef}` ;
+      e.imgs.push(makeImg(artPath(bgSource.id, "bg"), brief, wrap));
+      e.bg = wrap;
+    }
+
+    if (s.route) {
+      e.routeSvg = document.createElementNS(NS, "svg");
+      e.routeSvg.setAttribute("class", "route");
+      e.routePath = document.createElementNS(NS, "path");
+      e.routePath.setAttribute("pathLength", "1");
+      e.routeSvg.append(e.routePath);
+      root.append(e.routeSvg);
+      e.dots = s.route.pts.map(([x, y, label]) => {
+        const d = mk("div", "route-dot", root);
+        d.style.left = x + "%"; d.style.top = y + "%";
+        mk("span", "", d).textContent = label;
+        return d;
+      });
+    }
+
+    (s.p || []).forEach((def, k) => {
+      const [brief, x, y, w, at, motion] = def;
+      const el = mk("div", "piece" + (motion === "float" ? " float" : ""), root);
+      el.style.left = x + "%"; el.style.top = y + "%"; el.style.width = w + "%";
+      const inner = mk("div", "inner", el);
+      e.imgs.push(makeImg(artPath(s.id, "p" + (k + 1)), brief, inner));
+      e.pieces.push({ el, at, motion });
+    });
+
+    if (s.fg) {
+      const wrap = mk("div", "layer fg", root);
+      e.imgs.push(makeImg(artPath(s.id, "fg"), s.fg, wrap));
+      e.fg = wrap;
+    }
+
+    mk("div", "scrim", root);
+    e.tint = mk("div", "tint", root);
+    e.rest = mk("div", "", root); // spare slot for your own elements
+
+    const cap = mk("div", "caption", root);
+    const ch = CHAPTERS.find((c) => c.n === s.ch);
+    mk("div", "cap-eyebrow", cap).textContent = `Chapter ${ch.n} · ${ch.title}`;
+    mk("h2", "", cap).textContent = s.h;
+    const txt = mk("div", "cap-text", cap);
+    s.text.forEach((para) => {
+      const p = mk("p", "", txt);
+      if (s.reveal === "sentences") sentences(para).forEach((st) => { const sp = mk("span", "sent", p); sp.textContent = st; e.sents.push(sp); });
+      else p.textContent = para;
+    });
+    if (s.counter) {
+      e.counter = mk("div", "counter", cap);
+      e.counterNum = mk("span", "", e.counter);
+      mk("small", "", e.counter).textContent = s.counter.label;
+    }
+    e.cap = cap;
+    if (s.flash != null) e.flash = mk("div", "flash", root);
+    return e;
+  });
+
+  /* ---------- layout ---------- */
+  function layout() {
+    const keep = perScene ? g : 0;
+    perScene = innerHeight * CONFIG.vhPerScene / 100;
+    spacer.style.height = N * perScene + innerHeight + "px";
+    built.forEach((e) => {
+      if (!e.routePath) return;
+      const W = innerWidth, H = innerHeight;
+      e.routeSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      e.routePath.setAttribute("d", "M " + e.s.route.pts.map(([x, y]) => `${x / 100 * W} ${y / 100 * H}`).join(" L "));
+    });
+    if (keep) scrollTo(0, keep * perScene);
+  }
+
+  /* ---------- loading: only fetch art for scenes near the visitor ---------- */
+  function ensure(i) {
+    for (let j = Math.max(0, i - 1); j <= Math.min(N - 1, i + 2); j++)
+      built[j].imgs.forEach((img) => { if (img.dataset.src && !img.src) img.src = img.dataset.src; });
+  }
+
+  /* ---------- motion presets ---------- */
+  const BG = {
+    none: () => "scale(1.02)",
+    pushIn: (t) => `scale(${1.02 + 0.14 * t})`,
+    pullOut: (t) => `scale(${1.16 - 0.14 * t})`,
+    panL: (t) => `scale(1.1) translateX(${lerp(2, -2, t)}%)`,
+    panR: (t) => `scale(1.1) translateX(${lerp(-2, 2, t)}%)`
+  };
+
+  function piece(p, t) {
+    const k = ramp(t, p.at, p.at + 0.18);
+    const m = RM ? 0 : 1;
+    let op = k, tx = 0, ty = 0, sc = 1;
+    switch (p.motion) {
+      case "rise":   ty = (1 - k) * 30 * m; break;
+      case "fall":   ty = -(1 - k) * 60 * m; break;
+      case "grow":   sc = 0.7 + 0.3 * k; break;
+      case "slideL": tx = (1 - k) * 14 * m; break;
+      case "slideR": tx = -(1 - k) * 14 * m; break;
+      case "cross":  op = ramp(t, 0, 0.1) * (1 - ramp(t, 0.9, 1)); tx = lerp(-30, 30, t) * m; break;
+    }
+    p.el.style.opacity = op;
+    p.el.style.transform = `translate(-50%,-50%) translate(${tx}vw,${ty}px) scale(${sc})`;
+  }
+
+  function animate(e, tt, w) {
+    const s = e.s, t = clamp(tt);
+    if (e.bg) {
+      const m = RM ? "none" : (s.bgMotion || (s.art === "A" ? "pushIn" : "none"));
+      e.bg.style.transform = BG[m](t);
+    }
+    if (e.fg) e.fg.style.transform = RM ? "none" : `translateX(${lerp(2, -4, t)}vw) scale(${1.04 + 0.06 * t})`;
+    e.pieces.forEach((p) => piece(p, t));
+    e.cap.style.transform = RM ? "none" : `translateY(${(1 - ramp(t, 0, 0.25)) * 14}px)`;
+
+    if (e.sents.length) {
+      const step = 0.7 / e.sents.length;
+      e.sents.forEach((sp, k) => { sp.style.opacity = 0.14 + 0.86 * ramp(t, 0.08 + k * step, 0.08 + k * step + 0.1); });
+    }
+    if (s.tint) e.tint.style.opacity = lerp(s.tint[0], s.tint[1], t);
+    if (e.flash) e.flash.style.opacity = clamp(1 - Math.abs(t - s.flash) / 0.05) * 0.85;
+    if (e.counter) e.counterNum.textContent = Math.round(lerp(0, s.counter.to, smooth(ramp(t, s.counter.at, s.counter.at + 0.5)))).toLocaleString("en-US");
+    if (e.routePath) {
+      const pr = ramp(t, s.route.at, s.route.at + 0.6);
+      e.routePath.style.strokeDashoffset = 1 - pr;
+      e.dots.forEach((d, k) => d.classList.toggle("on", pr >= k / (e.dots.length - 1) - 0.001));
+    }
+    if (custom[s.id]) custom[s.id](tt, { root: e.root, bg: e.bg, fg: e.fg, pieces: e.pieces.map((p) => p.el), caption: e.cap, spare: e.rest, scene: s }, { g, i: e.i, w });
+  }
+
+  /* ---------- the frame loop ---------- */
+  const FADE = 0.18;
+  function frame() {
+    raf = 0;
+    g = clamp(scrollY / perScene, 0, N);
+    const ai = Math.min(N - 1, Math.floor(g));
+    built.forEach((e, i) => {
+      const tt = g - i;
+      let w = 1;
+      if (i > 0) w *= smooth(clamp((tt + FADE) / (2 * FADE)));
+      if (i < N - 1) w *= smooth(clamp((1 + FADE - tt) / (2 * FADE)));
+      const show = w > 0.002 && Math.abs(i - ai) <= 1;
+      e.root.style.visibility = show ? "visible" : "hidden";
+      if (show) { e.root.style.opacity = w; animate(e, tt, w); }
+    });
+    if (ai !== active) setActive(ai);
+    const prog = g / N;
+    $("#mFill").style.height = prog * 100 + "%";
+    $("#mBead").style.top = prog * 100 + "%";
+  }
+  const request = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+  function setActive(i) {
+    active = i;
+    const s = SCENES[i], ch = CHAPTERS.find((c) => c.n === s.ch);
+    body.dataset.tone = MOODS[s.mood].tone;
+    $("#mLabel").textContent = [s.place || ch.place, s.date].filter(Boolean).join(" · ");
+    $("#sceneCount").textContent = `${i + 1} / ${N}`;
+    built.forEach((e, k) => e.root.setAttribute("aria-hidden", String(k !== i)));
+    ensure(i);
+    try { history.replaceState(null, "", "#" + s.id); } catch (err) { /* some browsers block this on file:// */ }
+    window.dispatchEvent(new CustomEvent("scenechange", { detail: { scene: s, index: i } }));
+  }
+
+  /* ---------- navigation ---------- */
+  function goTo(i) {
+    i = clamp(i, 0, N - 1);
+    scrollTo({ top: (i + 0.4) * perScene, behavior: RM ? "auto" : "smooth" });
+  }
+  const firstOf = (n) => SCENES.findIndex((s) => s.ch === n);
+
+  function buildChapters() {
+    const list = $("#chList");
+    CHAPTERS.forEach((c) => {
+      const b = mk("button", "ch-item", list);
+      b.innerHTML = `<div class="n">CHAPTER ${c.n}</div><div class="t"></div><div class="p"></div><div class="b"></div>`;
+      b.querySelector(".t").textContent = c.title;
+      b.querySelector(".p").textContent = c.place;
+      b.querySelector(".b").textContent = c.blurb;
+      b.addEventListener("click", () => { $("#chapters").hidden = true; goTo(firstOf(c.n)); });
+    });
+    const track = $("#mTrack");
+    CHAPTERS.forEach((c) => { const t = mk("b", "", track); t.style.top = firstOf(c.n) / N * 100 + "%"; });
+    $("#chaptersBtn").addEventListener("click", () => { $("#chapters").hidden = false; });
+    $("#chaptersClose").addEventListener("click", () => { $("#chapters").hidden = true; });
+  }
+
+  /* ---------- controls ---------- */
+  function controls() {
+    document.querySelectorAll("[data-start]").forEach((b) => b.addEventListener("click", () => {
+      window.Narration.setMode(b.dataset.start);
+      $("#intro").classList.add("gone");
+      body.classList.remove("intro-open");
+      setTimeout(() => $("#intro").remove(), 800);
+    }));
+    document.querySelectorAll("button[data-mode]").forEach((b) => b.addEventListener("click", () => window.Narration.setMode(b.dataset.mode)));
+    $("#ccBtn").addEventListener("click", () => window.Narration.toggleCC());
+    $("#soundBtn").addEventListener("click", (ev) => {
+      const on = window.Ambient.toggle();
+      ev.currentTarget.setAttribute("aria-pressed", String(on));
+      ev.currentTarget.textContent = on ? "Sound: on" : "Sound: off";
+    });
+
+    addEventListener("keydown", (e) => {
+      if (body.classList.contains("intro-open")) return;
+      if (e.key === "Escape") { $("#chapters").hidden = true; return; }
+      if (e.key === " " && e.target.closest("button,a")) return;
+      const next = ["ArrowDown", "PageDown", " "], prev = ["ArrowUp", "PageUp"];
+      if (next.includes(e.key)) { e.preventDefault(); goTo(active + 1); }
+      else if (prev.includes(e.key)) { e.preventDefault(); goTo(active - 1); }
+      else if (e.key === "Home") { e.preventDefault(); goTo(0); }
+      else if (e.key === "End") { e.preventDefault(); goTo(N - 1); }
+    });
+
+    // click and drag down to explore (mouse only; touch already scrolls)
+    let drag = null;
+    stage.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "touch") return;
+      drag = { y: e.clientY, top: scrollY };
+      stage.setPointerCapture(e.pointerId);
+      body.classList.add("dragging");
+    });
+    stage.addEventListener("pointermove", (e) => { if (drag) scrollTo(0, drag.top + (e.clientY - drag.y) * 1.6); });
+    const end = () => { drag = null; body.classList.remove("dragging"); };
+    stage.addEventListener("pointerup", end);
+    stage.addEventListener("pointercancel", end);
+  }
+
+  /* ---------- cursor: a ring with a short trail of beads ---------- */
+  function cursor() {
+    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    body.classList.add("has-cursor");
+    const ring = mk("div", "cursor-ring", body);
+    const beads = [...Array(5)].map((_, k) => { const b = mk("div", "cursor-bead", body); b.style.setProperty("--k", k); if (RM) b.hidden = true; return b; });
+    const items = [ring, ...beads];
+    let mx = innerWidth / 2, my = innerHeight / 2;
+    const pos = items.map(() => ({ x: mx, y: my }));
+    addEventListener("pointermove", (e) => { mx = e.clientX; my = e.clientY; });
+    document.addEventListener("pointerover", (e) => ring.classList.toggle("hot", !!e.target.closest("button,a,[role=button]")));
+    (function loop() {
+      pos.forEach((p, k) => {
+        const tx = k === 0 ? mx : pos[k - 1].x, ty = k === 0 ? my : pos[k - 1].y;
+        const f = RM ? 1 : (k === 0 ? 0.3 : 0.38);
+        p.x += (tx - p.x) * f; p.y += (ty - p.y) * f;
+        items[k].style.transform = `translate3d(${p.x}px,${p.y}px,0)`;
+      });
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ---------- go ---------- */
+  buildChapters(); controls(); cursor(); layout();
+  addEventListener("scroll", request, { passive: true });
+  addEventListener("resize", () => { layout(); request(); });
+
+  const hashIndex = SCENES.findIndex((s) => "#" + s.id === location.hash);
+  if (hashIndex > 0) scrollTo(0, (hashIndex + 0.4) * perScene);
+  frame();
+
+  window.Stage = {
+    on: (id, fn) => { custom[id] = fn; },
+    goTo, scenes: SCENES,
+    active: () => active,
+    scene: () => SCENES[Math.max(active, 0)],
+    helpers: { clamp, lerp, smooth, ramp }
+  };
+})();
