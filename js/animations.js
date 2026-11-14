@@ -28,11 +28,11 @@
 (() => {
   const { clamp, ramp, lerp } = Stage.helpers;
 
-  /* ---- DEMO 1 + 2: rings of sound across the hills ---------------------
-   * c1s06: the execution's echo spreads outward and stays.
-   * c3s18: the same rings come back in reverse as the hills lean in.
+  /* ---- DEMO: rings of sound ----------------------------------------------
+   * c1s08: "Somewhere in the distance, a woman sang and lamented." The lament
+   * spreads outward across the hills as rings that stay.
    * Pure CSS circles: no artwork needed, so you can see an animation
-   * working before you've drawn anything.                                 */
+   * working before you've drawn anything. rings(id, true) plays them in reverse. */
   function rings(id, reverse) {
     let box = null;
     Stage.on(id, (t, el) => {
@@ -50,8 +50,7 @@
       });
     });
   }
-  rings("c1s06", false);
-  rings("c3s18", true);
+  rings("c1s08", false);
 
   /* ---- your animations go below this line ---- */
 })();

@@ -95,6 +95,7 @@
 
     const cap = mk("div", "caption", root);
     const ch = CHAPTERS.find((c) => c.n === s.ch);
+    if (s.brk) mk("div", "cap-brk", cap).textContent = "↠↠↠↠↠↠↠↠↠↠";
     mk("div", "cap-eyebrow", cap).textContent = `Chapter ${ch.n} · ${ch.title}`;
     mk("h2", "", cap).textContent = s.h;
     const txt = mk("div", "cap-text", cap);
@@ -115,7 +116,7 @@
 
   /* ---------- layout ---------- */
   function layout() {
-    const keep = perScene ? g : 0;
+    const keep = perScene ? target : 0;
     perScene = innerHeight * CONFIG.vhPerScene / 100;
     spacer.style.height = N * perScene + innerHeight + "px";
     built.forEach((e) => {
@@ -184,26 +185,52 @@
   }
 
   /* ---------- the frame loop ---------- */
+  // `target` follows the real scroll position; `g` chases it. That makes the
+  // animation glide instead of lurching with every notch of the mouse wheel.
   const FADE = 0.18;
-  function frame() {
-    raf = 0;
-    g = clamp(scrollY / perScene, 0, N);
+  let target = 0, last = 0, snapTimer = 0, dragging = false;
+
+  function render() {
     const ai = Math.min(N - 1, Math.floor(g));
     built.forEach((e, i) => {
       const tt = g - i;
-      let w = 1;
-      if (i > 0) w *= smooth(clamp((tt + FADE) / (2 * FADE)));
-      if (i < N - 1) w *= smooth(clamp((1 + FADE - tt) / (2 * FADE)));
+      let w = 1, cw = 1; // w: artwork crossfades; cw: text never overlaps the next scene's text
+      if (i > 0) { w *= smooth(clamp((tt + FADE) / (2 * FADE))); cw *= smooth(ramp(tt, 0.04, 0.2)); }
+      if (i < N - 1) { w *= smooth(clamp((1 + FADE - tt) / (2 * FADE))); cw *= smooth(1 - ramp(tt, 0.8, 0.96)); }
       const show = w > 0.002 && Math.abs(i - ai) <= 1;
       e.root.style.visibility = show ? "visible" : "hidden";
-      if (show) { e.root.style.opacity = w; animate(e, tt, w); }
+      if (show) { e.root.style.opacity = w; e.cap.style.opacity = cw; animate(e, tt, w); }
     });
     if (ai !== active) setActive(ai);
     const prog = g / N;
     $("#mFill").style.height = prog * 100 + "%";
     $("#mBead").style.top = prog * 100 + "%";
   }
-  const request = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+  function tick(now) {
+    raf = 0;
+    const dt = Math.min(0.1, (now - (last || now)) / 1000);
+    last = now;
+    const diff = target - g;
+    if (RM || Math.abs(diff) < 0.0004) g = target;
+    else g += diff * (1 - Math.exp(-dt / 0.11));
+    render();
+    if (g !== target) raf = requestAnimationFrame(tick); else last = 0;
+  }
+  const request = () => { target = clamp(scrollY / perScene, 0, N); if (!raf) raf = requestAnimationFrame(tick); };
+
+  // When the visitor stops scrolling in the middle of a crossfade, ease to the
+  // nearest moment where one scene is fully readable.
+  function snapSoon() {
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(() => {
+      if (dragging || body.classList.contains("intro-open") || g !== target) return snapSoon();
+      const i = Math.min(N - 1, Math.floor(target));
+      const local = target - i;
+      const lo = i === 0 ? 0 : 0.25, hi = i === N - 1 ? 1 : 0.75;
+      if (local < lo || local > hi) scrollTo({ top: (i + clamp(local, lo, hi)) * perScene, behavior: RM ? "auto" : "smooth" });
+    }, 160);
+  }
 
   function setActive(i) {
     active = i;
@@ -272,11 +299,12 @@
     stage.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "touch") return;
       drag = { y: e.clientY, top: scrollY };
+      dragging = true;
       stage.setPointerCapture(e.pointerId);
       body.classList.add("dragging");
     });
     stage.addEventListener("pointermove", (e) => { if (drag) scrollTo(0, drag.top + (e.clientY - drag.y) * 1.6); });
-    const end = () => { drag = null; body.classList.remove("dragging"); };
+    const end = () => { drag = null; dragging = false; body.classList.remove("dragging"); snapSoon(); };
     stage.addEventListener("pointerup", end);
     stage.addEventListener("pointercancel", end);
   }
@@ -305,12 +333,19 @@
 
   /* ---------- go ---------- */
   buildChapters(); controls(); cursor(); layout();
-  addEventListener("scroll", request, { passive: true });
-  addEventListener("resize", () => { layout(); request(); });
+  addEventListener("scroll", () => { request(); snapSoon(); }, { passive: true });
+  let lastW = innerWidth, lastH = innerHeight;
+  addEventListener("resize", () => {
+    // phone address bars grow and shrink while you scroll: ignore small height-only changes
+    if (Math.abs(innerWidth - lastW) < 1 && Math.abs(innerHeight - lastH) < 150) return;
+    lastW = innerWidth; lastH = innerHeight;
+    layout(); request();
+  });
 
   const hashIndex = SCENES.findIndex((s) => "#" + s.id === location.hash);
   if (hashIndex > 0) scrollTo(0, (hashIndex + 0.4) * perScene);
-  frame();
+  g = target = clamp(scrollY / perScene, 0, N);
+  render();
 
   window.Stage = {
     on: (id, fn) => { custom[id] = fn; },
