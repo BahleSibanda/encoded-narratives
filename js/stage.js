@@ -26,9 +26,41 @@
   let perScene = 0, g = 0, active = -1, raf = 0;
 
   /* ---------- build the scenes ---------- */
-  const artPath = (id, layer) => `art/${id}-${layer}.${CONFIG.artExt}`;
+  const artPath = (id, layer) => `art/${id}-${layer}.${layer === "bg" ? (CONFIG.bgExt || CONFIG.artExt) : CONFIG.artExt}`;
 
-  function makeImg(path, brief, parent, phClass) {
+  /* Pieces: find the drawing inside the PNG and ignore the empty transparent
+     border, so "width" means the size of the DRAWING, not of the canvas. */
+  function contentBox(img) {
+    const MAX = 240;
+    const k = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+    const cw = Math.max(1, Math.round(img.naturalWidth * k)), ch = Math.max(1, Math.round(img.naturalHeight * k));
+    const cv = document.createElement("canvas");
+    cv.width = cw; cv.height = ch;
+    const cx = cv.getContext("2d", { willReadFrequently: true });
+    cx.drawImage(img, 0, 0, cw, ch);
+    const a = cx.getImageData(0, 0, cw, ch).data;
+    let x0 = cw, y0 = ch, x1 = -1, y1 = -1;
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      if (a[(y * cw + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return null;
+    const pad = 2;
+    return { x0: Math.max(0, x0 - pad) / cw, y0: Math.max(0, y0 - pad) / ch, x1: Math.min(cw, x1 + 1 + pad) / cw, y1: Math.min(ch, y1 + 1 + pad) / ch };
+  }
+  function applyTrim(img, inner, b) {
+    const bw = b.x1 - b.x0, bh = b.y1 - b.y0;
+    if (bw > 0.97 && bh > 0.97) return; // nothing worth trimming
+    inner.style.position = "relative";
+    inner.style.overflow = "hidden";
+    inner.style.aspectRatio = `${bw * img.naturalWidth} / ${bh * img.naturalHeight}`;
+    img.style.position = "absolute";
+    img.style.width = 100 / bw + "%";
+    img.style.height = "auto";
+    img.style.left = -(b.x0 / bw) * 100 + "%";
+    img.style.top = -(b.y0 / bh) * 100 + "%";
+  }
+
+  function makeImg(path, brief, parent, phClass, onLoad) {
     const img = new Image();
     img.alt = ""; img.decoding = "async"; img.hidden = true; img.dataset.src = path;
     parent.append(img);
@@ -38,7 +70,7 @@
       mk("span", "", ph).textContent = brief;
       mk("b", "fname", ph).textContent = path;   // the exact file name this box is waiting for
     }
-    img.addEventListener("load", () => { img.hidden = false; if (ph) ph.remove(); });
+    img.addEventListener("load", () => { img.hidden = false; if (ph) ph.remove(); if (onLoad) onLoad(img); });
     img.addEventListener("error", () => img.remove());
     return img;
   }
@@ -81,9 +113,11 @@
     (s.p || []).forEach((def, k) => {
       const [brief, x, y, w, at, motion] = def;
       const el = mk("div", "piece" + (motion === "float" ? " float" : ""), root);
-      el.style.left = x + "%"; el.style.top = y + "%"; el.style.width = w + "%";
+      el.style.left = x + "%"; el.style.top = y + "%"; el.style.width = Math.min(92, w * (CONFIG.pieceScale || 1)) + "%";
       const inner = mk("div", "inner", el);
-      e.imgs.push(makeImg(artPath(s.id, "p" + (k + 1)), brief, inner));
+      e.imgs.push(makeImg(artPath(s.id, "p" + (k + 1)), brief, inner, "", (img) => {
+        try { const b = contentBox(img); if (b) applyTrim(img, inner, b); } catch (err) { /* canvas blocked (e.g. file://): show the image untrimmed */ }
+      }));
       e.pieces.push({ el, at, motion });
     });
 

@@ -28,25 +28,24 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;paddin
 .hut-page .mark{font-family:var(--font-display);font-weight:650;font-size:clamp(1.5rem,3.2vw,2.2rem);text-align:center}
 .hut-page .sub{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.16em;text-align:center;margin-top:.4rem;color:var(--ink-soft)}
 .hut-stage{flex:1;width:100%;display:grid;place-items:center}
-.hut{position:relative;width:min(62vw,440px);aspect-ratio:4/3.4}
-.hut-roof{position:absolute;top:0;left:50%;transform:translateX(-50%);width:108%;height:46%;background:var(--ink);clip-path:polygon(50% 0,100% 100%,0 100%)}
-.hut-roof::after{content:"";position:absolute;left:50%;bottom:-.6rem;transform:translateX(-50%);width:62%;height:.6rem;
-  background:linear-gradient(135deg,var(--accent) 25%,transparent 25%),linear-gradient(225deg,var(--accent) 25%,transparent 25%);background-size:1rem .6rem}
-.hut-body{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:84%;height:58%;background:var(--ink-soft);border-radius:4px 4px 10px 10px}
-.door{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:34%;height:66%;background:#efe6d8;border:3px solid var(--accent);
-  border-radius:3px 3px 6px 6px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:1rem;cursor:pointer;transition:box-shadow .4s var(--ease)}
-.door:hover{box-shadow:inset 0 0 0 6px rgba(60,107,75,.18)}
+.hut{--hut-h:min(clamp(400px,calc(100dvh - 19rem),720px),calc((100vw - 3rem) / 0.6606));position:relative;height:var(--hut-h);width:calc(var(--hut-h) * 0.6606)}
+.hut-art{position:absolute;inset:0;transform-origin:47.79% 70.03%}
+.hut-art img{display:block;width:100%;height:100%;user-select:none;pointer-events:none}
+/* the door: an invisible hotspot over the drawn doorway (positions are % of the drawing) */
+.door{position:absolute;left:28.16%;top:55.74%;width:39.28%;height:28.57%;
+  border-radius:50% 50% 0 0 / 30% 30% 0 0;cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding-bottom:.9rem;
+  transition:background .35s var(--ease),box-shadow .35s var(--ease)}
+.door:hover,.door:focus-visible{background:rgba(60,107,75,.16);box-shadow:inset 0 0 0 2px var(--accent)}
 .door span{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.2em;color:var(--accent)}
-.door::before,.door::after{content:"";position:absolute;top:.5rem;bottom:.5rem;width:.4rem;
-  background:repeating-linear-gradient(to bottom,var(--accent) 0,var(--accent) .4rem,transparent .4rem,transparent .8rem)}
-.door::before{left:.5rem}.door::after{right:.5rem}
 .hut-caption{text-align:center;min-height:4.2rem}
 .hut-caption .name{font-family:var(--font-display);font-style:italic;font-size:clamp(1.2rem,2.6vw,1.6rem);color:var(--accent)}
 .hut-caption .blurb{margin:.35rem auto 0;max-width:34ch;color:var(--ink-soft)}
 .hut-foot a{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.18em;border-bottom:1px solid rgba(27,23,18,.3)}
 .door-overlay{position:fixed;inset:0;background:var(--accent);opacity:0;pointer-events:none;z-index:50;transition:opacity .55s var(--ease)}
 .hut-page.is-entering .door-overlay{opacity:1;pointer-events:all}
-.hut-page.is-entering .hut-stage{transform:scale(2.4);opacity:0;transition:transform .6s var(--ease),opacity .5s var(--ease) .1s}
+.hut-art{transition:transform .65s var(--ease)}
+.hut-page.is-entering .hut-art{transform:scale(7)}
+.hut-page.is-entering .hut-stage{opacity:0;transition:opacity .35s var(--ease) .3s}
 .hut-page.is-entering header,.hut-page.is-entering .hut-caption,.hut-page.is-entering .hut-foot{opacity:0;transition:opacity .3s}
 
 /* ==========================================================================
@@ -63,11 +62,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;paddin
 .scene[data-tone=dark]{--txt:#efe6d8}
 .scene[data-tone=light]{--txt:#1b1712}
 .scene .mood-bg{position:absolute;inset:0;background:var(--mood)}
-.layer{position:absolute;inset:0;will-change:transform}
+.layer{position:absolute;inset:0}
 img[hidden]{display:none!important}
 .layer img{width:100%;height:100%;object-fit:cover;display:block}
 .piece{position:absolute;opacity:0;will-change:transform,opacity}
-.piece img{width:100%;height:auto;display:block}
+.piece img{width:100%;height:auto;display:block;max-width:none}
 .piece.float .inner{animation:drift 6s ease-in-out infinite alternate}
 @keyframes drift{to{transform:translateY(-14px) rotate(2deg)}}
 
