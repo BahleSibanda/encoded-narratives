@@ -74,6 +74,7 @@ img[hidden]{display:none!important}
 /* placeholders: shown only where a drawing hasn't been added yet */
 .ph{font-family:var(--font-mono);font-size:.68rem;line-height:1.5;letter-spacing:.06em;text-align:center;padding:.8rem;
   border:1.5px dashed currentColor;opacity:.5;display:grid;place-items:center;color:var(--txt)}
+.ph .fname{display:block;margin-top:.55rem;font-weight:700;letter-spacing:.02em;word-break:break-all}
 .layer .ph{position:absolute;left:46%;top:14%;width:48%;height:40%}
 .layer.fg .ph{left:4%;top:60%;width:30%;height:20%}
 .piece .ph{aspect-ratio:4/5;width:100%}

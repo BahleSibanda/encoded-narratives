@@ -32,7 +32,7 @@ window.STORY = {
   CONFIG: {
     title: "Lozikeyi",
     subtitle: "Queen in the city of kings",
-    artExt: "webp",     // change to "png" if you export PNGs
+    artExt: "png",      // every drawing in art/ must be a .png (change to "webp" to use WebP instead)
     audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3
     vhPerScene: 120,    // how much scrolling one scene takes
     showPlaceholders: true

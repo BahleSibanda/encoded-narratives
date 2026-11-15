@@ -33,7 +33,11 @@
     img.alt = ""; img.decoding = "async"; img.hidden = true; img.dataset.src = path;
     parent.append(img);
     let ph = null;
-    if (CONFIG.showPlaceholders && brief) { ph = mk("div", "ph " + (phClass || ""), parent); ph.textContent = brief; }
+    if (CONFIG.showPlaceholders && brief) {
+      ph = mk("div", "ph " + (phClass || ""), parent);
+      mk("span", "", ph).textContent = brief;
+      mk("b", "fname", ph).textContent = path;   // the exact file name this box is waiting for
+    }
     img.addEventListener("load", () => { img.hidden = false; if (ph) ph.remove(); });
     img.addEventListener("error", () => img.remove());
     return img;
