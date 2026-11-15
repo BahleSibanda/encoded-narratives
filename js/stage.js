@@ -75,6 +75,15 @@
     return img;
   }
 
+  const chRange = {};
+  CHAPTERS.forEach((c) => {
+    const first = SCENES.findIndex((x) => x.ch === c.n);
+    let last = first;
+    SCENES.forEach((x, i) => { if (x.ch === c.n) last = i; });
+    chRange[c.n] = { start: first, end: last + 1 };
+  });
+  const chHasPlaceholder = new Set();
+
   const sentences = (t) => t.match(/[^.!?]+[.!?]+[”’"]*\s*|[^.!?]+$/g) || [t];
 
   const built = SCENES.map((s, i) => {
@@ -93,6 +102,17 @@
       const brief = s.art === "A" ? s.bg : `Background from ${s.bgRef}` ;
       e.imgs.push(makeImg(artPath(bgSource.id, "bg"), brief, wrap));
       e.bg = wrap;
+    }
+
+    if (!e.bg) {
+      const info = CHAPTERS.find((c) => c.n === s.ch);
+      const wrap = mk("div", "layer bg chbg", root);
+      const showBrief = !chHasPlaceholder.has(s.ch);   // one placeholder per chapter, not one per scene
+      chHasPlaceholder.add(s.ch);
+      e.imgs.push(makeImg(artPath("ch" + s.ch, "bg"), showBrief ? (info.bg || "Chapter background") : null, wrap));
+      const wash = mk("div", "chwash", root);
+      wash.style.opacity = CONFIG.chapterBgWash != null ? CONFIG.chapterBgWash : 0.6;
+      e.chbg = wrap;
     }
 
     if (s.route) {
@@ -202,6 +222,10 @@
     if (e.bg) {
       const m = RM ? "none" : (s.bgMotion || (s.art === "A" ? "pushIn" : "none"));
       e.bg.style.transform = BG[m](t);
+    }
+    if (e.chbg) {
+      const r = chRange[s.ch];
+      e.chbg.style.transform = RM ? "none" : BG.panL(clamp((g - r.start) / (r.end - r.start)));
     }
     if (e.fg) e.fg.style.transform = RM ? "none" : `translateX(${lerp(2, -4, t)}vw) scale(${1.04 + 0.06 * t})`;
     e.pieces.forEach((p) => piece(p, t));

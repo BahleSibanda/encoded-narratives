@@ -11,6 +11,7 @@
  *  mood    background colour: ink | dusk | bruise | ember | river | green |
  *          gold | sepia | paper
  *  brk     true = your ↠↠↠ section break is shown above the headline
+ *  (Scenes with no hero background of their own show their CHAPTER background, art/ch1-bg, ch2-bg, ch3-bg.)
  *  bg / fg short briefs for the background and foreground illustrations
  *  p       cut-out pieces: [brief, x%, y%, width%, appearsAt(0-1), motion]
  *          motions: fade rise fall grow slideL slideR cross float
@@ -34,6 +35,7 @@ window.STORY = {
     subtitle: "Queen in the city of kings",
     artExt: "png",      // format of pieces and foregrounds (needs transparency). "png" or "webp"
     bgExt: "png",       // format of the full backgrounds. Set to "jpg" for much smaller files (no transparency needed)
+    chapterBgWash: 0.6, // how strongly the scene colour covers the chapter background (0 = picture only, 1 = colour only)
     pieceScale: 1.35,   // makes every cut-out piece this many times bigger. 1 = as listed, 1.6 = much bigger
     audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3
     vhPerScene: 120,    // how much scrolling one scene takes
@@ -53,9 +55,12 @@ window.STORY = {
   },
 
   CHAPTERS: [
-    { n: 1, title: "The Fulfillment",                     place: "Lobengula’s homestead", blurb: "A princess is named a witch, and a healer is called to the king." },
-    { n: 2, title: "The Queen’s Dance",                   place: "New Bulawayo",          blurb: "A borrowed child, the Maxim guns, and a king who ends at the Kana River." },
-    { n: 3, title: "Lozikeyi and the Recovering Nation",  place: "Siganda",               blurb: "A queen rules in silence while the cattle, the princes and the king are taken." }
+    { n: 1, title: "The Fulfillment",                     place: "Lobengula’s homestead", blurb: "A princess is named a witch, and a healer is called to the king.",
+      bg: "Chapter 1 backdrop: the royal homestead at dusk, huts and hills, soft and quiet" },
+    { n: 2, title: "The Queen’s Dance",                   place: "New Bulawayo",          blurb: "A borrowed child, the Maxim guns, and a king who ends at the Kana River.",
+      bg: "Chapter 2 backdrop: the kingdom on the move, a long red road under heavy sky" },
+    { n: 3, title: "Lozikeyi and the Recovering Nation",  place: "Siganda",               blurb: "A queen rules in silence while the cattle, the princes and the king are taken.",
+      bg: "Chapter 3 backdrop: the open plateau, long grass, wide sky" }
   ],
 
   SCENES: [

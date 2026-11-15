@@ -29,6 +29,9 @@ SCENES.forEach((s) => count[s.art]++);
 out += `**Totals:** ${count.A} hero illustrations (A), ${count.B} cut-out scenes (B), ${count.R} reuse scenes (R), ${count.C} text-only scenes (C), ${SCENES.length} scenes in all.\n\n`;
 out += `**Draw in this order:** all A scenes first (they carry the story), then the B cut-outs, then R extras. C scenes need nothing.\n`;
 
+out += `\n## Chapter backgrounds (3 files)\n\nShown behind every scene that has no hero background of its own (the cut-out scenes and text-only scenes). The scene's mood colour is laid over it so the text stays readable. Keep these calm and low in detail. Tip: take a hero background, blur it and dim it.\n\n`;
+CHAPTERS.forEach((c) => { out += `- **Chapter ${c.n}** \`art/ch${c.n}-bg.${bgExt}\`: ${c.bg}\n`; });
+
 CHAPTERS.forEach((c) => {
   out += `\n---\n\n## Chapter ${c.n}: ${c.title}\n`;
   SCENES.filter((s) => s.ch === c.n).forEach((s) => {
