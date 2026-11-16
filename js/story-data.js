@@ -37,7 +37,8 @@ window.STORY = {
     bgExt: "png",       // format of the full backgrounds. Set to "jpg" for much smaller files (no transparency needed)
     chapterBgWash: 0.6, // how strongly the scene colour covers the chapter background (0 = picture only, 1 = colour only)
     pieceScale: 1.35,   // makes every cut-out piece this many times bigger. 1 = as listed, 1.6 = much bigger
-    audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3
+    audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3; background sound in audio/ambient*.mp3
+    ambientVolume: 0.4, // loudness of the background sound (0 to 1). It dips automatically while narration speaks
     vhPerScene: 120,    // how much scrolling one scene takes
     showPlaceholders: true
   },
