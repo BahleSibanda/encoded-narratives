@@ -1,6 +1,6 @@
 /**
  * story-data.js — the whole story, one object per scene.
- * Matches your EDITED draft (3 chapters, 54 scenes).
+ * 
  *
  * HOW A SCENE WORKS
  *  id      c1s01 = chapter 1, scene 1. Art files are found by this id (see README).
