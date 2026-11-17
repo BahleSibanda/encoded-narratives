@@ -38,9 +38,14 @@ window.STORY = {
     chapterBgWash: 0.6, // how strongly the scene colour covers the chapter background (0 = picture only, 1 = colour only)
     pieceScale: 1.35,   // makes every cut-out piece this many times bigger. 1 = as listed, 1.6 = much bigger
     audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3; background sound in audio/ambient*.mp3
+    narration: "auto",  // "auto": your recording if there is one, otherwise the browser reads the scene aloud. "off": no Listen mode at all.
+    ttsLang: "en-ZA",   // preferred accent for the browser voice (falls back to en-GB, then en-US)
+    ttsVoice: "",       // optionally name a voice, e.g. "Natural" picks Microsoft's better Edge voices
+    ttsRate: 0.92,      // speaking speed (1 = normal; lower is slower)
+    pronounce: {},      // respell names for the voice, e.g. { "Lobengula": "Loh ben goo la" }
     ambientVolume: 0.4, // loudness of the background sound (0 to 1). It dips automatically while narration speaks
     vhPerScene: 120,    // how much scrolling one scene takes
-    showPlaceholders: true
+    showPlaceholders: false // true shows dashed "draw me" boxes. Or add ?briefs to the address to see them once
   },
 
   MOODS: {

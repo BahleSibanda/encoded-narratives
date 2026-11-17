@@ -23,6 +23,7 @@
 
   const body = document.body, stage = $("#stage"), spacer = $("#spacer");
   const custom = {};
+  const SHOW_PH = !!CONFIG.showPlaceholders || /[?&]briefs\b/.test(location.search);
   let perScene = 0, g = 0, active = -1, raf = 0;
 
   /* ---------- build the scenes ---------- */
@@ -65,7 +66,7 @@
     img.alt = ""; img.decoding = "async"; img.hidden = true; img.dataset.src = path;
     parent.append(img);
     let ph = null;
-    if (CONFIG.showPlaceholders && brief) {
+    if (SHOW_PH && brief) {
       ph = mk("div", "ph " + (phClass || ""), parent);
       mk("span", "", ph).textContent = brief;
       mk("b", "fname", ph).textContent = path;   // the exact file name this box is waiting for
@@ -96,15 +97,7 @@
 
     const e = { s, i, root, imgs: [], pieces: [], sents: [] };
 
-    const bgSource = s.bgRef ? SCENES.find((x) => x.id === s.bgRef) : s;
-    if (s.art === "A" || (s.art === "R" && s.bgRef)) {
-      const wrap = mk("div", "layer bg", root);
-      const brief = s.art === "A" ? s.bg : `Background from ${s.bgRef}` ;
-      e.imgs.push(makeImg(artPath(bgSource.id, "bg"), brief, wrap));
-      e.bg = wrap;
-    }
-
-    if (!e.bg) {
+    {   // chapter backdrop: sits under everything, so a scene with no picture of its own is never empty
       const info = CHAPTERS.find((c) => c.n === s.ch);
       const wrap = mk("div", "layer bg chbg", root);
       const showBrief = !chHasPlaceholder.has(s.ch);   // one placeholder per chapter, not one per scene
@@ -113,6 +106,14 @@
       const wash = mk("div", "chwash", root);
       wash.style.opacity = CONFIG.chapterBgWash != null ? CONFIG.chapterBgWash : 0.6;
       e.chbg = wrap;
+    }
+
+    const bgSource = s.bgRef ? SCENES.find((x) => x.id === s.bgRef) : s;
+    if (s.art === "A" || (s.art === "R" && s.bgRef)) {
+      const wrap = mk("div", "layer bg", root);
+      const brief = s.art === "A" ? s.bg : `Background from ${s.bgRef}` ;
+      e.imgs.push(makeImg(artPath(bgSource.id, "bg"), brief, wrap));
+      e.bg = wrap;
     }
 
     if (s.route) {
@@ -331,6 +332,10 @@
 
   /* ---------- controls ---------- */
   function controls() {
+    if (CONFIG.narration === "off") {   // no Listen mode: remove every trace of it
+      document.querySelectorAll('[data-start="listen"], .seg, #ccBtn').forEach((n) => n.remove());
+      const ch = document.querySelector(".choices"); if (ch) ch.style.gridTemplateColumns = "minmax(0, 16rem)";
+    }
     document.querySelectorAll("[data-start]").forEach((b) => b.addEventListener("click", () => {
       window.Narration.setMode(b.dataset.start);
       $("#intro").classList.add("gone");
@@ -338,11 +343,14 @@
       setTimeout(() => $("#intro").remove(), 800);
     }));
     document.querySelectorAll("button[data-mode]").forEach((b) => b.addEventListener("click", () => window.Narration.setMode(b.dataset.mode)));
-    $("#ccBtn").addEventListener("click", () => window.Narration.toggleCC());
-    $("#soundBtn").addEventListener("click", (ev) => {
-      const on = window.Ambient.toggle();
-      ev.currentTarget.setAttribute("aria-pressed", String(on));
-      ev.currentTarget.textContent = on ? "Sound: on" : "Sound: off";
+    const ccBtn = $("#ccBtn");
+    if (ccBtn) ccBtn.addEventListener("click", () => window.Narration.toggleCC());
+    const soundBtn = $("#soundBtn");
+    soundBtn.addEventListener("click", () => { window.Ambient.toggle(); });
+    window.addEventListener("ambientchange", (ev) => {
+      const { on, source } = ev.detail;
+      soundBtn.setAttribute("aria-pressed", String(on));
+      soundBtn.textContent = on ? "Sound: on" + (source ? " · " + source : "") : "Sound: off";
     });
 
     addEventListener("keydown", (e) => {

@@ -1,20 +1,27 @@
 /**
- * audio.js — two separate things (this file was updated for background sound):
- *   Narration: one recording per scene, played in Listen mode.
- *              Files go in audio/<sceneId>.mp3 (e.g. audio/c1s01.mp3).
- *              A missing file is fine: that scene is just silent.
- *   Ambient:   background sound, off until the visitor clicks Sound. It looks for
- *              audio/ambient-ch1.mp3, ambient-ch2, ambient-ch3 (one per chapter,
- *              crossfaded when the chapter changes) and then audio/ambient.mp3 (one
- *              loop for the whole story). If none exist it plays a soft synthesised drone.
- *              While narration speaks, the background sound is lowered.
+ * audio.js: narration and background sound.
+ *
+ *  NARRATION (Listen mode)
+ *    1. If a recording exists for the scene (audio/c1s01.mp3 ...) it plays that.
+ *    2. If not, the browser reads the scene aloud with the device's own voice,
+ *       so you do not have to record anything.
+ *    Set  narration: "off"  in story-data.js to remove Listen mode entirely.
+ *
+ *  BACKGROUND SOUND (the Sound button, off until clicked)
+ *    audio/ambient-ch1.mp3, ambient-ch2, ambient-ch3 (one per chapter, crossfaded)
+ *    or audio/ambient.mp3 (one loop for the whole story). If there are no files it
+ *    plays a soft synthesised drone. It dips while narration speaks.
  */
 window.Narration = (() => {
+  const CFG = window.STORY.CONFIG;
   const body = document.body;
   const note = document.getElementById("narrNote");
-  let mode = "read", cc = false, cur = null;
+  const synth = window.speechSynthesis;
+  const EXTS = [...new Set([CFG.audioExt, "mp3", "m4a", "ogg", "wav"])];
+  let mode = "read", cc = false, cur = null, token = 0, voices = [];
 
   const showNote = (t) => { if (note) note.textContent = t; };
+  const duck = (f) => { if (window.Ambient) window.Ambient.duck(f); };
 
   function fadeOut(a) {
     const step = setInterval(() => {
@@ -24,20 +31,76 @@ window.Narration = (() => {
   }
 
   function stop() {
+    token++;
     if (cur) { fadeOut(cur); cur = null; }
+    if (synth) synth.cancel();
     showNote("");
-    if (window.Ambient) window.Ambient.duck(false);
+    duck(false);
+  }
+
+  /* ---- the browser's own voice ---- */
+  const loadVoices = () => { voices = synth ? synth.getVoices() : []; };
+  if (synth) { loadVoices(); if (synth.addEventListener) synth.addEventListener("voiceschanged", loadVoices); }
+
+  function pickVoice() {
+    const want = (CFG.ttsVoice || "").toLowerCase();
+    if (want) { const v = voices.find((x) => x.name.toLowerCase().includes(want)); if (v) return v; }
+    for (const lang of [CFG.ttsLang || "en-ZA", "en-GB", "en-US", "en"]) {
+      const v = voices.find((x) => x.lang && x.lang.toLowerCase().replace("_", "-").startsWith(lang.toLowerCase()));
+      if (v) return v;
+    }
+    return null;
+  }
+  function pronounce(text) {
+    const map = CFG.pronounce || {};
+    Object.keys(map).forEach((k) => { text = text.split(k).join(map[k]); });
+    return text;
+  }
+  // some browsers cut long speech off, so read in sentence-sized pieces
+  function chunks(text) {
+    const parts = text.match(/[^.!?]+[.!?]+[”’"]*\s*|[^.!?]+$/g) || [text];
+    const out = []; let line = "";
+    parts.forEach((p) => { if ((line + p).length > 200 && line) { out.push(line.trim()); line = p; } else line += p; });
+    if (line.trim()) out.push(line.trim());
+    return out;
+  }
+  function speak(scene, my) {
+    if (!synth || !window.SpeechSynthesisUtterance) { showNote("This browser can’t read aloud"); return; }
+    const parts = chunks(pronounce((scene.text || []).join(" ")));
+    const voice = pickVoice();
+    let i = 0;
+    const next = () => {
+      if (my !== token) return;
+      if (i >= parts.length) { duck(false); return; }
+      const u = new SpeechSynthesisUtterance(parts[i++]);
+      if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = CFG.ttsLang || "en";
+      u.rate = CFG.ttsRate || 0.92;
+      u.onend = next;
+      u.onerror = () => {};
+      synth.speak(u);
+    };
+    showNote(voice ? "Voice: " + voice.name : "Voice: your device’s default");
+    duck(true);
+    next();
   }
 
   function playScene(scene) {
     stop();
     if (mode !== "listen" || !scene) return;
-    const src = scene.audio || `audio/${scene.id}.${window.STORY.CONFIG.audioExt}`;
-    const a = new Audio(src);
+    const my = token;
+    const list = scene.audio ? [scene.audio] : EXTS.map((x) => `audio/${scene.id}.${x}`);
+    const a = new Audio(list[0]);
+    let n = 0;
     cur = a;
-    a.addEventListener("error", () => { if (cur === a) showNote("No recording for this scene yet"); });
-    a.addEventListener("playing", () => { if (cur === a) { showNote(""); if (window.Ambient) window.Ambient.duck(true); } });
-    a.addEventListener("ended", () => { if (cur === a && window.Ambient) window.Ambient.duck(false); });
+    a.addEventListener("error", () => {
+      if (cur !== a) return;
+      if (++n < list.length) { a.src = list[n]; a.play().catch(() => {}); return; }
+      cur = null;
+      // no recording for this scene: read it aloud (short pause so fast scrolling doesn't chatter)
+      setTimeout(() => { if (my === token && mode === "listen") speak(scene, my); }, 400);
+    });
+    a.addEventListener("playing", () => { if (cur === a) { showNote(""); duck(true); } });
+    a.addEventListener("ended", () => { if (cur === a) duck(false); });
     a.play().catch(() => {});
   }
 
@@ -50,6 +113,7 @@ window.Narration = (() => {
   }
 
   function setMode(m) {
+    if (CFG.narration === "off") m = "read";
     mode = m;
     render();
     if (m === "listen" && window.Stage) playScene(window.Stage.scene());
@@ -66,12 +130,15 @@ window.Narration = (() => {
 
 window.Ambient = (() => {
   const CFG = window.STORY.CONFIG;
-  const EXT = CFG.audioExt;
+  const EXTS = [...new Set([CFG.audioExt, "mp3", "m4a", "ogg", "wav"])];
   const BASE = CFG.ambientVolume != null ? CFG.ambientVolume : 0.4;
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   const els = {}, bad = new Set();
   let on = false, ducked = false, chapter = 1, current = null, token = 0;
   let ctx = null, master = null;
+  const announce = (src) => window.dispatchEvent(new CustomEvent("ambientchange", {
+    detail: { on, source: !on ? null : (src === undefined ? "starting…" : (src ? src.split("/").pop() : "built-in drone (no sound file found)")) }
+  }));
 
   const level = () => BASE * (ducked ? 0.35 : 1);
 
@@ -137,26 +204,29 @@ window.Ambient = (() => {
   async function switchTo(n) {
     const my = ++token;
     const prev = current;
-    const candidates = [`audio/ambient-ch${n}.${EXT}`, `audio/ambient.${EXT}`].filter((c) => !bad.has(c));
-    for (const src of candidates) {
+    const candidates = [];
+    [`audio/ambient-ch${n}`, "audio/ambient"].forEach((base) => EXTS.forEach((x) => candidates.push(`${base}.${x}`)));
+    const todo = candidates.filter((c) => !bad.has(c));
+    for (const src of todo) {
       if (prev && prev.src === src) return;                 // this file is already playing: let it run on
       const ok = await attempt(src);
       if (my !== token || !on) { if (ok) fade(getEl(src), 0, 400, true); return; }
-      if (ok) { retire(prev); current = { src, el: getEl(src) }; return; }
+      if (ok) { retire(prev); current = { src, el: getEl(src) }; announce(src); return; }
     }
-    if (prev && !prev.src) return;                          // drone already playing
-    retire(prev);
+    if (prev) return;                                       // nothing new for this chapter: keep what is playing
     synthOn();
     current = { src: null, el: null };
+    announce(null);
   }
 
   function toggle() {
     on = !on;
-    if (on) switchTo(chapter);
+    if (on) { announce(undefined); switchTo(chapter); }
     else {
       token++;
       retire(current);
       current = null;
+      announce();
     }
     return on;
   }
