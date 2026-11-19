@@ -1,6 +1,6 @@
 /**
  * story-data.js — the whole story, one object per scene.
- * 
+ * Matches your EDITED draft (3 chapters, 54 scenes).
  *
  * HOW A SCENE WORKS
  *  id      c1s01 = chapter 1, scene 1. Art files are found by this id (see README).
@@ -38,6 +38,8 @@ window.STORY = {
     chapterBgWash: 0.6, // how strongly the scene colour covers the chapter background (0 = picture only, 1 = colour only)
     pieceScale: 1.35,   // makes every cut-out piece this many times bigger. 1 = as listed, 1.6 = much bigger
     audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3; background sound in audio/ambient*.mp3
+    ebook: "",          // path to your ebook, e.g. "ebook/lozikeyi-ebook.pdf". Leave empty and no download link is shown.
+    ebookLabel: "Download the ebook",
     narration: "auto",  // "auto": your recording if there is one, otherwise the browser reads the scene aloud. "off": no Listen mode at all.
     ttsLang: "en-ZA",   // preferred accent for the browser voice (falls back to en-GB, then en-US)
     ttsVoice: "",       // optionally name a voice, e.g. "Natural" picks Microsoft's better Edge voices
@@ -67,6 +69,40 @@ window.STORY = {
       bg: "Chapter 2 backdrop: the kingdom on the move, a long red road under heavy sky" },
     { n: 3, title: "Lozikeyi and the Recovering Nation",  place: "Siganda",               blurb: "A queen rules in silence while the cattle, the princes and the king are taken.",
       bg: "Chapter 3 backdrop: the open plateau, long grass, wide sky" }
+  ],
+
+  /* Words that get a dotted underline in the text. Tap one and its meaning appears.
+     words: every spelling to match (case does not matter). text: the meaning.
+     These meanings are short and general: please check them with a source you trust. */
+  GLOSSARY: [
+    { words: ["inyanga", "izinyanga"],       text: "A traditional healer who works with herbs, roots and medicines." },
+    { words: ["umthakathi"],                 text: "A witch: someone believed to use harmful magic. The accusation could be deadly." },
+    { words: ["umelusi", "umalusi"],         text: "A herder, the person who tends the cattle." },
+    { words: ["kraal"],                      text: "A fenced enclosure for cattle, and the homestead built around it." },
+    { words: ["induna", "izinduna"],         text: "A senior official or commander who served the king." },
+    { words: ["iNxwala"],                    text: "The first-fruits ceremony of the Ndebele kingdom, held each year in the king’s presence." },
+    { words: ["amaNdebele"],                 text: "The Ndebele people." },
+    { words: ["Ndlovukazi"],                 text: "“She-elephant”: a title for a queen of very high rank." },
+    { words: ["Mwali"],                      text: "The high god of the Matopo hills, whose shrines the Ndebele also consulted." },
+    { words: ["Imbizo"],                     text: "A famous regiment of the Ndebele army." },
+    { words: ["Mzilikazi"],                  text: "Lobengula’s father, who founded the Ndebele kingdom." },
+    { words: ["Rhodes"],                     text: "Cecil Rhodes, the British businessman whose company took control of the region." },
+    { words: ["Maxim"],                      text: "An early machine gun that could fire hundreds of rounds a minute." },
+    { words: ["assegai"],                    text: "A slender spear." },
+    { words: ["Winchesters"],                text: "Winchester rifles, a repeating firearm." },
+    { words: ["totems", "totem"],            text: "Animal emblems that identify a clan. Reciting them honours a person’s family." },
+    { words: ["Native Commissioner"],        text: "A colonial official who governed a district and collected taxes." },
+    { words: ["Great Wife"],                 text: "The king’s senior wife." },
+    { words: ["tsetse"],                     text: "A biting fly whose bites killed cattle and oxen." }
+  ],
+
+  /* Beads the visitor gathers: one per chapter, and a green one for reaching the end.
+     The colours and meanings follow the beadwork palette used across the site. */
+  BEADS: [
+    { color: "#a22c29", name: "Red",   meaning: "passion and love",                      ch: 1 },
+    { color: "#c68a2e", name: "Gold",  meaning: "status and ornament",                   ch: 2 },
+    { color: "#26456f", name: "Blue",  meaning: "faithfulness and hope",                 ch: 3 },
+    { color: "#3c6b4b", name: "Green", meaning: "growth: ground that will bear again",   end: true }
   ],
 
   SCENES: [

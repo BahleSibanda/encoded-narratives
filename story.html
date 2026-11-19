@@ -20,6 +20,7 @@
       <button data-mode="listen" aria-pressed="false">Listen</button>
     </div>
     <button id="ccBtn" aria-pressed="false" hidden>Captions</button>
+    <a data-ebook hidden></a>
     <a href="learn-more.html" class="tb-right">Learn more</a>
   </header>
 
@@ -30,9 +31,28 @@
 
   <footer class="bottombar">
     <button id="chaptersBtn">Chapters</button>
+    <span id="beadHud" aria-label="Beads gathered"></span>
     <span id="narrNote" role="status"></span>
     <span id="sceneCount"></span>
   </footer>
+
+  <div id="beadToast" role="status"></div>
+
+  <section id="ending" class="ending" aria-hidden="true">
+    <div class="ending-inner">
+      <div class="ending-eyebrow">THE STORY CONTINUES</div>
+      <h2>Thank you for walking with her.</h2>
+      <p>You have come through all three chapters. These are the beads you gathered along the way.</p>
+      <div id="endBeads" class="end-beads"></div>
+      <div class="end-actions">
+        <button id="saveBeads">Save your beads</button>
+        <a data-ebook hidden></a>
+        <a href="learn-more.html">Learn more</a>
+        <button id="readAgain">Read again</button>
+        <a href="index.html">Back to the hut</a>
+      </div>
+    </div>
+  </section>
 
   <div id="chapters" class="overlay" hidden>
     <button class="close" id="chaptersClose">Close ✕</button>
@@ -55,5 +75,6 @@
   <script src="js/audio.js"></script>
   <script src="js/stage.js"></script>
   <script src="js/animations.js"></script>
+  <script src="js/ebook.js"></script>
 </body>
 </html>

@@ -23,6 +23,7 @@
 
   const body = document.body, stage = $("#stage"), spacer = $("#spacer");
   const custom = {};
+  const DEBUG = /[?&](briefs|debug)\b/.test(location.search);
   const SHOW_PH = !!CONFIG.showPlaceholders || /[?&]briefs\b/.test(location.search);
   let perScene = 0, g = 0, active = -1, raf = 0;
 
@@ -61,9 +62,41 @@
     img.style.top = -(b.y0 / bh) * 100 + "%";
   }
 
+  /* Loading: the site looks for the file name shown in ART-BRIEF.md, but if it is not there
+     it also tries the other common picture types (png, PNG, jpg, JPG, jpeg, webp). */
+  const extFound = {};   // e.g. "art/c3s14-bg" -> "jpg", or false when no file exists
+  const probing = {};    // base -> scenes waiting while the first one searches
+  function startLoad(img) {
+    if (img.dataset.started) return;
+    img.dataset.started = "1";
+    const base = img.dataset.base;
+    const exts = [...new Set([img.dataset.primary, "png", "PNG", "jpg", "JPG", "jpeg", "webp"])];
+    if (extFound[base] === false) return;                                   // already known to be missing
+    if (extFound[base]) { img.src = `${base}.${extFound[base]}`; return; }   // already known to exist
+    if (probing[base]) { probing[base].push(img); return; }                 // someone is already looking: wait for them
+    const waiting = (probing[base] = []);
+    let k = 0;
+    img.addEventListener("load", () => {
+      extFound[base] = exts[k];
+      delete probing[base];
+      waiting.forEach((w) => { w.src = `${base}.${exts[k]}`; });
+    }, { once: true });
+    img.addEventListener("error", function onErr() {
+      if (++k < exts.length) { img.src = `${base}.${exts[k]}`; return; }
+      img.removeEventListener("error", onErr);
+      extFound[base] = false;
+      delete probing[base];
+      if (DEBUG) console.warn("Image not found: " + img.dataset.src + " (also tried " + exts.slice(1).join(", ") + ")");
+      img.remove();
+    });
+    img.src = `${base}.${exts[k]}`;
+  }
+
   function makeImg(path, brief, parent, phClass, onLoad) {
     const img = new Image();
     img.alt = ""; img.decoding = "async"; img.hidden = true; img.dataset.src = path;
+    img.dataset.base = path.replace(/\.[A-Za-z0-9]+$/, "");
+    img.dataset.primary = path.slice(img.dataset.base.length + 1);
     parent.append(img);
     let ph = null;
     if (SHOW_PH && brief) {
@@ -72,7 +105,6 @@
       mk("b", "fname", ph).textContent = path;   // the exact file name this box is waiting for
     }
     img.addEventListener("load", () => { img.hidden = false; if (ph) ph.remove(); if (onLoad) onLoad(img); });
-    img.addEventListener("error", () => img.remove());
     return img;
   }
 
@@ -84,6 +116,58 @@
     chRange[c.n] = { start: first, end: last + 1 };
   });
   const chHasPlaceholder = new Set();
+
+  /* ---------- glossary: dotted words that explain themselves when tapped ---------- */
+  const GLOSS = window.STORY.GLOSSARY || [];
+  const glossMap = {};
+  GLOSS.forEach((g) => g.words.forEach((w) => { glossMap[w.toLowerCase()] = g; }));
+  const esc = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const glossRe = GLOSS.length
+    ? new RegExp("(^|[^\\p{L}])(" + Object.keys(glossMap).sort((a, b) => b.length - a.length).map(esc).join("|") + ")(?![\\p{L}])", "giu")
+    : null;
+
+  function addText(parent, text) {
+    if (!glossRe) { parent.append(text); return; }
+    glossRe.lastIndex = 0;
+    let last = 0, m;
+    while ((m = glossRe.exec(text))) {
+      const start = m.index + m[1].length;
+      if (start > last) parent.append(text.slice(last, start));
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "gl"; b.textContent = m[2];
+      b.dataset.term = m[2].toLowerCase();
+      b.setAttribute("aria-expanded", "false");
+      parent.append(b);
+      last = start + m[2].length;
+    }
+    if (last < text.length) parent.append(text.slice(last));
+  }
+
+  const tip = mk("div", "", body);
+  tip.id = "glTip"; tip.hidden = true; tip.setAttribute("role", "tooltip");
+  let tipFor = null;
+  function hideTip() {
+    tip.hidden = true;
+    if (tipFor) { tipFor.setAttribute("aria-expanded", "false"); tipFor = null; }
+  }
+  function showTip(btn) {
+    if (tipFor === btn) { hideTip(); return; }
+    hideTip();
+    const entry = glossMap[btn.dataset.term];
+    if (!entry) return;
+    tip.innerHTML = "<b></b><span></span>";
+    tip.firstChild.textContent = btn.textContent;
+    tip.lastChild.textContent = entry.text;
+    tip.hidden = false;
+    const r = btn.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+    const left = Math.min(Math.max(8, r.left + r.width / 2 - tw / 2), innerWidth - tw - 8);
+    let top = r.top - th - 10;
+    if (top < 56) top = r.bottom + 10;
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+    btn.setAttribute("aria-expanded", "true");
+    tipFor = btn;
+  }
 
   const sentences = (t) => t.match(/[^.!?]+[.!?]+[”’"]*\s*|[^.!?]+$/g) || [t];
 
@@ -160,8 +244,8 @@
     const txt = mk("div", "cap-text", cap);
     s.text.forEach((para) => {
       const p = mk("p", "", txt);
-      if (s.reveal === "sentences") sentences(para).forEach((st) => { const sp = mk("span", "sent", p); sp.textContent = st; e.sents.push(sp); });
-      else p.textContent = para;
+      if (s.reveal === "sentences") sentences(para).forEach((st) => { const sp = mk("span", "sent", p); addText(sp, st); e.sents.push(sp); });
+      else addText(p, para);
     });
     if (s.counter) {
       e.counter = mk("div", "counter", cap);
@@ -190,7 +274,7 @@
   /* ---------- loading: only fetch art for scenes near the visitor ---------- */
   function ensure(i) {
     for (let j = Math.max(0, i - 1); j <= Math.min(N - 1, i + 2); j++)
-      built[j].imgs.forEach((img) => { if (img.dataset.src && !img.src) img.src = img.dataset.src; });
+      built[j].imgs.forEach(startLoad);
   }
 
   /* ---------- motion presets ---------- */
@@ -247,6 +331,106 @@
     if (custom[s.id]) custom[s.id](tt, { root: e.root, bg: e.bg, fg: e.fg, pieces: e.pieces.map((p) => p.el), caption: e.cap, spare: e.rest, scene: s }, { g, i: e.i, w });
   }
 
+  /* ---------- ending screen and bead collection ---------- */
+  const ending = $("#ending"), hud = $("#beadHud"), toast = $("#beadToast"), endBeads = $("#endBeads");
+  const BEADS = window.STORY.BEADS || [];
+  const BEAD_KEY = "en_beads";
+  let earned = new Set(), toastTimer = 0;
+  try {
+    if (/[?&]resetbeads\b/.test(location.search)) localStorage.removeItem(BEAD_KEY);   // story.html?resetbeads starts the collection again
+    earned = new Set(JSON.parse(localStorage.getItem(BEAD_KEY) || "[]"));
+  } catch (err) { /* private mode */ }
+
+  function drawBeads() {
+    if (hud) {
+      hud.textContent = "";
+      BEADS.forEach((b, i) => {
+        const d = mk("i", "hud-bead" + (earned.has(i) ? " on" : ""), hud);
+        d.style.setProperty("--c", b.color);
+      });
+      hud.setAttribute("aria-label", `Beads gathered: ${earned.size} of ${BEADS.length}`);
+    }
+    if (endBeads) {
+      endBeads.textContent = "";
+      BEADS.forEach((b, i) => {
+        const d = mk("span", "end-bead" + (earned.has(i) ? " on" : ""), endBeads);
+        d.style.setProperty("--c", b.color);
+        mk("i", "", d);
+        mk("small", "", d).textContent = b.name;
+        mk("em", "", d).textContent = b.meaning;
+      });
+    }
+  }
+  function earn(i) {
+    earned.add(i);
+    try { localStorage.setItem(BEAD_KEY, JSON.stringify([...earned])); } catch (err) { /* private mode */ }
+    drawBeads();
+    const b = BEADS[i];
+    if (toast) {
+      toast.textContent = `${b.end ? "The end of the story" : "Chapter " + b.ch + " complete"} · ${b.name} bead: ${b.meaning}`;
+      toast.style.setProperty("--c", b.color);
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 4200);
+    }
+    const el = hud && hud.children[i];
+    if (el) { el.classList.add("pop"); setTimeout(() => el.classList.remove("pop"), 800); }
+  }
+  // a chapter's bead is earned when you scroll through the end of its last scene
+  function checkBeads(ep) {
+    BEADS.forEach((b, i) => {
+      if (earned.has(i)) return;
+      if (b.end ? ep > 0.6 : g >= chRange[b.ch].end - 1 + 0.7) earn(i);
+    });
+  }
+  function updateEnding(ep) {
+    if (!ending) return;
+    ending.style.opacity = ep;
+    ending.style.visibility = ep > 0.01 ? "visible" : "hidden";
+    ending.style.pointerEvents = ep > 0.6 ? "auto" : "none";
+    ending.setAttribute("aria-hidden", String(ep < 0.6));
+  }
+  const wrapWords = (text, max) => {
+    const out = []; let line = "";
+    text.split(" ").forEach((w) => { if ((line + " " + w).trim().length > max) { out.push(line.trim()); line = w; } else line += " " + w; });
+    if (line.trim()) out.push(line.trim());
+    return out;
+  };
+  function saveBeads() {
+    try {
+      const W = 1400, H = 560, cv = document.createElement("canvas");
+      cv.width = W; cv.height = H;
+      const x = cv.getContext("2d");
+      x.fillStyle = "#efe6d8"; x.fillRect(0, 0, W, H);
+      x.fillStyle = "#1b1712"; x.textAlign = "center";
+      x.font = "700 52px Georgia, serif"; x.fillText("My beads from Lozikeyi", W / 2, 100);
+      x.strokeStyle = "#b8863b"; x.lineWidth = 4;
+      x.beginPath(); x.moveTo(110, 250); x.lineTo(W - 110, 250); x.stroke();
+      const gap = (W - 320) / Math.max(1, BEADS.length - 1);
+      BEADS.forEach((b, i) => {
+        const cx = BEADS.length === 1 ? W / 2 : 160 + gap * i;
+        x.beginPath(); x.arc(cx, 250, 58, 0, Math.PI * 2);
+        if (earned.has(i)) { x.fillStyle = b.color; x.fill(); }
+        else { x.fillStyle = "#efe6d8"; x.fill(); }
+        x.lineWidth = 4; x.strokeStyle = "#1b1712"; x.stroke();
+        x.fillStyle = "#1b1712"; x.font = "700 30px Georgia, serif"; x.fillText(b.name, cx, 360);
+        x.font = "22px Georgia, serif";
+        wrapWords(b.meaning, 22).forEach((ln, k) => x.fillText(ln, cx, 396 + k * 28));
+      });
+      x.fillStyle = "#5b5142"; x.font = "20px Georgia, serif"; x.fillText("Encoded Narratives", W / 2, H - 28);
+      cv.toBlob((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "my-beads.png";
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      });
+    } catch (err) {
+      const n = document.getElementById("narrNote");
+      if (n) n.textContent = "Saving isn’t supported in this browser";
+    }
+  }
+
   /* ---------- the frame loop ---------- */
   // `target` follows the real scroll position; `g` chases it. That makes the
   // animation glide instead of lurching with every notch of the mouse wheel.
@@ -255,15 +439,19 @@
 
   function render() {
     const ai = Math.min(N - 1, Math.floor(g));
+    const ep = ramp(g, N - 0.14, N - 0.02);   // how far the ending screen has faded in
     built.forEach((e, i) => {
       const tt = g - i;
       let w = 1, cw = 1; // w: artwork crossfades; cw: text never overlaps the next scene's text
       if (i > 0) { w *= smooth(clamp((tt + FADE) / (2 * FADE))); cw *= smooth(ramp(tt, 0.04, 0.2)); }
       if (i < N - 1) { w *= smooth(clamp((1 + FADE - tt) / (2 * FADE))); cw *= smooth(1 - ramp(tt, 0.8, 0.96)); }
+      if (i === N - 1) cw *= 1 - ep;
       const show = w > 0.002 && Math.abs(i - ai) <= 1;
       e.root.style.visibility = show ? "visible" : "hidden";
       if (show) { e.root.style.opacity = w; e.cap.style.opacity = cw; animate(e, tt, w); }
     });
+    updateEnding(ep);
+    checkBeads(ep);
     if (ai !== active) setActive(ai);
     const prog = g / N;
     $("#mFill").style.height = prog * 100 + "%";
@@ -345,6 +533,12 @@
     document.querySelectorAll("button[data-mode]").forEach((b) => b.addEventListener("click", () => window.Narration.setMode(b.dataset.mode)));
     const ccBtn = $("#ccBtn");
     if (ccBtn) ccBtn.addEventListener("click", () => window.Narration.toggleCC());
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest(".gl");
+      if (b) showTip(b); else hideTip();
+    });
+    const again = $("#readAgain"); if (again) again.addEventListener("click", () => goTo(0));
+    const save = $("#saveBeads"); if (save) save.addEventListener("click", saveBeads);
     const soundBtn = $("#soundBtn");
     soundBtn.addEventListener("click", () => { window.Ambient.toggle(); });
     window.addEventListener("ambientchange", (ev) => {
@@ -355,7 +549,7 @@
 
     addEventListener("keydown", (e) => {
       if (body.classList.contains("intro-open")) return;
-      if (e.key === "Escape") { $("#chapters").hidden = true; return; }
+      if (e.key === "Escape") { $("#chapters").hidden = true; hideTip(); return; }
       if (e.key === " " && e.target.closest("button,a")) return;
       const next = ["ArrowDown", "PageDown", " "], prev = ["ArrowUp", "PageUp"];
       if (next.includes(e.key)) { e.preventDefault(); goTo(active + 1); }
@@ -367,7 +561,7 @@
     // click and drag down to explore (mouse only; touch already scrolls)
     let drag = null;
     stage.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "touch") return;
+      if (e.pointerType === "touch" || e.target.closest(".gl")) return;
       drag = { y: e.clientY, top: scrollY };
       dragging = true;
       stage.setPointerCapture(e.pointerId);
@@ -390,7 +584,17 @@
     const pos = items.map(() => ({ x: mx, y: my }));
     addEventListener("pointermove", (e) => { mx = e.clientX; my = e.clientY; });
     document.addEventListener("pointerover", (e) => ring.classList.toggle("hot", !!e.target.closest("button,a,[role=button]")));
+    let dx = 0, dy = 0, lx = 0, ly = 0;
     (function loop() {
+      if (!RM) {   // pointer depth: layers shift a little at different speeds, so each scene feels like a stage
+        dx += ((mx / innerWidth * 2 - 1) - dx) * 0.06;
+        dy += ((my / innerHeight * 2 - 1) - dy) * 0.06;
+        if (Math.abs(dx - lx) + Math.abs(dy - ly) > 0.002) {
+          stage.style.setProperty("--px", dx.toFixed(3));
+          stage.style.setProperty("--py", dy.toFixed(3));
+          lx = dx; ly = dy;
+        }
+      }
       pos.forEach((p, k) => {
         const tx = k === 0 ? mx : pos[k - 1].x, ty = k === 0 ? my : pos[k - 1].y;
         const f = RM ? 1 : (k === 0 ? 0.3 : 0.38);
@@ -403,7 +607,8 @@
 
   /* ---------- go ---------- */
   buildChapters(); controls(); cursor(); layout();
-  addEventListener("scroll", () => { request(); snapSoon(); }, { passive: true });
+  addEventListener("scroll", () => { request(); snapSoon(); hideTip(); }, { passive: true });
+  drawBeads();
   let lastW = innerWidth, lastH = innerHeight;
   addEventListener("resize", () => {
     // phone address bars grow and shrink while you scroll: ignore small height-only changes

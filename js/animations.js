@@ -1,5 +1,5 @@
 /**
- * animations.js — YOUR animations live here.
+ * animations.js
  *
  *   Stage.on("c1s03", (t, el, ctx) => { ... });
  *
