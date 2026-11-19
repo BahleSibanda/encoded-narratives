@@ -38,7 +38,7 @@ window.STORY = {
     chapterBgWash: 0.6, // how strongly the scene colour covers the chapter background (0 = picture only, 1 = colour only)
     pieceScale: 1.35,   // makes every cut-out piece this many times bigger. 1 = as listed, 1.6 = much bigger
     audioExt: "mp3",    // narration lives in audio/<sceneId>.mp3; background sound in audio/ambient*.mp3
-    ebook: "",          // path to your ebook, e.g. "ebook/lozikeyi-ebook.pdf". Leave empty and no download link is shown.
+    ebook: "Lozikeyi_Queen_in_the_City_of_Kings.epub",          // path to your ebook, e.g. "ebook/lozikeyi-ebook.pdf". Leave empty and no download link is shown.
     ebookLabel: "Download the ebook",
     narration: "auto",  // "auto": your recording if there is one, otherwise the browser reads the scene aloud. "off": no Listen mode at all.
     ttsLang: "en-ZA",   // preferred accent for the browser voice (falls back to en-GB, then en-US)
